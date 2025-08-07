@@ -1,12 +1,13 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Info, AlertTriangle } from 'lucide-react';
+import { X, Info, AlertTriangle } from 'lucide-react';
 import './PartModal.css';
 
 const PartModal = ({ 
   part, 
   onClose, 
   parts, 
-  setSelectedPart
+  setSelectedPart,
+  onVideoEnded, // New prop for video end callback
 }) => {
   const videoRef = useRef(null);
   const playPromiseRef = useRef(null);
@@ -103,8 +104,15 @@ const PartModal = ({
       }
     };
 
+    const handleVideoEnded = () => {
+      if (typeof onVideoEnded === 'function') {
+        onVideoEnded();
+      }
+    };
+
     videoElement.addEventListener('loadeddata', handleLoadedData);
-    
+    videoElement.addEventListener('ended', handleVideoEnded);
+
     let timeoutId = setTimeout(() => {
       if (videoElement.readyState < 3) {
         setIsLoading(true);
@@ -114,12 +122,13 @@ const PartModal = ({
     return () => {
       clearTimeout(timeoutId);
       videoElement.removeEventListener('loadeddata', handleLoadedData);
+      videoElement.removeEventListener('ended', handleVideoEnded);
       if (playPromiseRef.current) {
         playPromiseRef.current.catch(() => {});
         playPromiseRef.current = null;
       }
     };
-  }, [currentPartIndex, media.type, userInteracted, safePlay]);
+  }, [currentPartIndex, media.type, userInteracted, safePlay, onVideoEnded]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -149,19 +158,10 @@ const PartModal = ({
         <button className="close-button" onClick={onClose}>
           <X size={24} />
         </button>
-        
+
         <div className="modal-header">
-          <button 
-            className="nav-button prev" 
-            onClick={(e) => {
-              e.stopPropagation();
-              navigateParts(-1);
-            }}
-            aria-label="Previous part"
-          >
-            <ChevronLeft size={24} />
-          </button>
-          
+         
+
           <div className="part-title-container">
             <h2 className="part-title">
               <span className="part-icon">{part.icon}</span>
@@ -180,19 +180,10 @@ const PartModal = ({
               </button>
             </div>
           </div>
-          
-          <button 
-            className="nav-button next" 
-            onClick={(e) => {
-              e.stopPropagation();
-              navigateParts(1);
-            }}
-            aria-label="Next part"
-          >
-            <ChevronRight size={24} />
-          </button>
-        </div>
+
         
+        </div>
+
         <div className="modal-body">
           <div className={`media-container ${!part.safetyNote ? 'no-safety-note' : ''}`}>
             {media.type === 'video' ? (
@@ -210,19 +201,21 @@ const PartModal = ({
                     <p>Loading video...</p>
                   </div>
                 )}
-                <video
-                  ref={videoRef}
-                  controls={false}
-                  muted
-                  playsInline
-                  loop
-                  poster={media.poster}
-                  className={`part-media ${isLoading ? 'loading' : ''}`}
-                  onClick={togglePlayback}
-                >
-                  <source src={media.src} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+               <video
+  ref={videoRef}
+  controls={false}
+  muted
+  playsInline
+  poster={media.poster}
+  className={`part-media ${isLoading ? 'loading' : ''}`}
+  onClick={togglePlayback}
+  onEnded={() => {
+    if (typeof onVideoEnded === 'function') onVideoEnded();
+  }}
+>
+  <source src={media.src} type="video/mp4" />
+  Your browser does not support the video tag.
+</video>
                 <button 
                   className={`play-button ${isPlaying ? 'playing' : ''} ${isLoading ? 'hidden' : ''}`}
                   onClick={(e) => {
@@ -243,7 +236,7 @@ const PartModal = ({
                 }}
               />
             )}
-            
+
             {part.safetyNote && (
               <div className="safety-section">
                 <h3 className="detail-title">
@@ -254,7 +247,7 @@ const PartModal = ({
               </div>
             )}
           </div>
-          
+
           <div className="part-details">
             {showSpecs && part.specs && (
               <div className="specs-section">
@@ -268,19 +261,19 @@ const PartModal = ({
                 </ul>
               </div>
             )}
-            
+
             <div className="detail-section">
               <h3 className="detail-title">Description</h3>
               <p className="detail-text">{part.description}</p>
             </div>
-            
+
             <div className="detail-section">
               <h3 className="detail-title">How It Works</h3>
               <p className="detail-text">{part.howItWorks}</p>
             </div>
           </div>
         </div>
-        
+
         <div className="modal-footer">
           <button 
             className="close-modal-button" 
@@ -294,4 +287,4 @@ const PartModal = ({
   );
 };
 
-export default PartModal; 
+export default PartModal;

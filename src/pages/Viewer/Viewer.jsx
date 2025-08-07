@@ -4,10 +4,14 @@ import PartModal from '../../components/PartModal/PartModal';
 import ImageViewer from '../../components/ImageViewer/ImageViewer';
 import './Viewer.css';
 
+// Define a constant for 4 seconds delay between modal close and next open
+const MODAL_TRANSITION_DELAY = 2000;
+
 const Viewer = () => {
   // Modal & Tour State
   const [selectedPart, setSelectedPart] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false); // For fade transitions
 
   // Current controlled view for ImageViewer
   const [currentView, setCurrentView] = useState('front');
@@ -21,15 +25,16 @@ const Viewer = () => {
   // PostBack thumbnails slideshow index (-1 means not started)
   const [postBackIndex, setPostBackIndex] = useState(-1);
 
-  // Tour stages: waiting → frontHotspots → backHotspots → postBackThumbnails → accessories → done
+  // Tour stages including stopped state
   const [tourStage, setTourStage] = useState('waiting');
 
-  // Timers refs
+  // Timer refs
   const modalTimerRef = useRef(null);
   const accessoryTimerRef = useRef(null);
+  const modalOpenTimerRef = useRef(null);
   const featuresGridRef = useRef(null);
 
-  // Paths for postBack full screen slideshow images (replace with actual paths)
+  // PostBack thumbnails images
   const postBackImages = [
     '/assets/images/Caterwil1.jpg',
     '/assets/images/Caterwil2.jpg',
@@ -38,7 +43,7 @@ const Viewer = () => {
     '/assets/images/Caterwil5.jpg',
   ];
 
-  // Smooth scroll down → wait 9 seconds → scroll up → navigate home
+  // Smooth scroll and navigate function
   const handleScrollAndNavigate = useCallback(async () => {
     const scrollDown = () =>
       new Promise((resolve) => {
@@ -104,60 +109,92 @@ const Viewer = () => {
     window.location.href = '/';
   }, []);
 
-  // Function to estimate modal reading time
+  // Estimate reading time calculation
   const estimateReadingTime = useCallback((text) => {
     const words = text ? text.trim().split(/\s+/).length : 20;
-    return Math.min(Math.max(words * 300, 4000), 15000); // Between 4s and 15s
+    return Math.min(Math.max(words * 300, 4000), 15000);
   }, []);
 
-  // Filter parts depending on currentView
+  // Filter parts for current view
   const partsForView = React.useMemo(() => {
     return currentView === 'front'
       ? wheelchairParts.filter((p) => p.frontPosition)
       : wheelchairParts.filter((p) => p.backPosition);
   }, [currentView]);
 
-  // Memoized function to open modal for hotspot index with auto-close timer
+  // Callback for when video in modal ends - close modal and proceed to next
+  const handleVideoEnded = useCallback(() => {
+    setModalVisible(false); // start fade out
+    clearTimeout(modalTimerRef.current);
+
+    setTimeout(() => {
+      setSelectedPart(null);
+      setIsModalOpen(false);
+      setTimeout(() => {
+        setHotspotIndex((i) => i + 1);
+      }, MODAL_TRANSITION_DELAY);
+    }, 500); // fade out duration should match your CSS transition timing
+  }, []);
+
+  // Open modal for hotspot with fade transitions and delay
   const openModalForHotspot = useCallback(
     (index) => {
       if (index < 0 || index >= partsForView.length) {
-        setSelectedPart(null);
-        setIsModalOpen(false);
+        setModalVisible(false);
+        clearTimeout(modalTimerRef.current);
+        setTimeout(() => {
+          setSelectedPart(null);
+          setIsModalOpen(false);
+        }, 500);
         return;
       }
 
-      const part = partsForView[index];
-      setSelectedPart({
-        ...part,
-        media:
-          part.media || {
-            type: 'image',
-            src: '/assets/images/placeholder-part.jpg',
-            poster: '/assets/images/placeholder-poster.jpg',
-          },
-        specs: part.specs || [],
-        safetyNote: part.safetyNote || null,
-      });
-      setIsModalOpen(true);
-
-      const readTime = estimateReadingTime(part.description);
-
+      setModalVisible(false);
       clearTimeout(modalTimerRef.current);
-      modalTimerRef.current = setTimeout(() => {
-        setIsModalOpen(false);
-        setSelectedPart(null);
+      clearTimeout(modalOpenTimerRef.current);
+
+      modalOpenTimerRef.current = setTimeout(() => {
+        const part = partsForView[index];
+        setSelectedPart({
+          ...part,
+          media:
+            part.media || {
+              type: 'image',
+              src: '/assets/images/placeholder-part.jpg',
+              poster: '/assets/images/placeholder-poster.jpg',
+            },
+          specs: part.specs || [],
+          safetyNote: part.safetyNote || null,
+        });
+        setIsModalOpen(true);
+
         setTimeout(() => {
-          setHotspotIndex((i) => i + 1);
-        }, 500);
-      }, readTime);
+          setModalVisible(true);
+        }, 100);
+
+        if (part.media && part.media.type === 'video') {
+          // Wait for video end, no auto close timer
+        } else {
+          modalTimerRef.current = setTimeout(() => {
+            setModalVisible(false);
+            setTimeout(() => {
+              setSelectedPart(null);
+              setIsModalOpen(false);
+              setTimeout(() => {
+                setHotspotIndex((i) => i + 1);
+              }, MODAL_TRANSITION_DELAY);
+            }, 500);
+          }, Math.max(estimateReadingTime(part.description), 7000));
+        }
+      }, MODAL_TRANSITION_DELAY); // delay before opening modal
     },
     [partsForView, estimateReadingTime]
   );
 
-  // Scroll accessories grid to center active item, only when NOT in auto slideshow tour stage
+  // Scroll accessories grid to center active item
   useEffect(() => {
     if (accessoryIndex === -1 || !featuresGridRef.current) return;
-    if (tourStage === 'accessories') return; // Disable auto scroll during tour accessories slideshow
+    if (tourStage === 'accessories') return;
 
     const container = featuresGridRef.current;
     const accessoryElements = container.children;
@@ -172,8 +209,10 @@ const Viewer = () => {
     }
   }, [accessoryIndex, tourStage]);
 
-  // Main effect manages tour stage transitions & modals for hotspots
+  // Main tour effect with stop check
   useEffect(() => {
+    if (tourStage === 'stopped') return;
+
     if (tourStage === 'waiting') {
       const timer = setTimeout(() => {
         setTourStage('frontHotspots');
@@ -210,12 +249,12 @@ const Viewer = () => {
     }
   }, [tourStage, hotspotIndex, currentView, openModalForHotspot, partsForView.length]);
 
-  // PostBack Thumbnails slideshow effect: show one image fullscreen at a time
+  // PostBack thumbnail slideshow
   useEffect(() => {
+    if (tourStage === 'stopped') return;
     if (tourStage !== 'postBackThumbnails' || postBackIndex === -1) return;
 
     if (postBackIndex >= postBackImages.length) {
-      // After slideshow finished, trigger scroll and navigate home
       setTourStage('done');
       setPostBackIndex(-1);
       handleScrollAndNavigate();
@@ -231,6 +270,7 @@ const Viewer = () => {
 
   // Accessories slideshow effect
   useEffect(() => {
+    if (tourStage === 'stopped') return;
     if (tourStage !== 'accessories' || accessoryIndex === -1) return;
 
     if (accessoryIndex >= wheelchairFeatures.length) {
@@ -250,15 +290,20 @@ const Viewer = () => {
   // Manual modal close handler
   const handleCloseModal = useCallback(() => {
     clearTimeout(modalTimerRef.current);
-    setIsModalOpen(false);
-    setSelectedPart(null);
 
-    if (tourStage === 'frontHotspots' || tourStage === 'backHotspots') {
-      setHotspotIndex((i) => i + 1);
-    }
-  }, [tourStage]);
+    setModalVisible(false);
 
-  // Responsive: Detect mobile for horizontal scroll styling
+    setTimeout(() => {
+      setSelectedPart(null);
+      setIsModalOpen(false);
+
+      setTimeout(() => {
+        setHotspotIndex((i) => i + 1);
+      }, MODAL_TRANSITION_DELAY);
+    }, 500);
+  }, []);
+
+  // Responsive mobile detection for horizontal scroll
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false
   );
@@ -269,14 +314,57 @@ const Viewer = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Features grid scroll style (enable horizontal scrolling only on mobile)
   const featuresGridStyle = {
     whiteSpace: 'nowrap',
     overflowX: isMobile ? 'auto' : 'hidden',
   };
 
+  // Stop and restart tour handlers
+  const stopTour = useCallback(() => {
+    clearTimeout(modalTimerRef.current);
+    clearTimeout(accessoryTimerRef.current);
+
+    setIsModalOpen(false);
+    setSelectedPart(null);
+
+    setTourStage('stopped');
+
+    setHotspotIndex(0);
+    setAccessoryIndex(-1);
+    setPostBackIndex(-1);
+  }, []);
+
+  const restartTour = useCallback(() => {
+    setHotspotIndex(0);
+    setAccessoryIndex(-1);
+    setPostBackIndex(-1);
+    setSelectedPart(null);
+    setIsModalOpen(false);
+    setTourStage('waiting');
+  }, []);
+
   return (
     <div className="viewer-page">
+      {/* Tour control buttons */}
+      <div className="tour-controls" style={{ marginBottom: 20, textAlign: 'center' }}>
+        <button
+          onClick={stopTour}
+          style={{ marginRight: 10, padding: '8px 16px', fontSize: '1rem', cursor: 'pointer' }}
+          disabled={tourStage === 'stopped'}
+          title="Stop the automatic tour"
+        >
+          Stop Tour
+        </button>
+        <button
+          onClick={restartTour}
+          style={{ padding: '8px 16px', fontSize: '1rem', cursor: 'pointer' }}
+          disabled={tourStage !== 'stopped'}
+          title="Restart the tour from beginning"
+        >
+          Restart Tour
+        </button>
+      </div>
+
       <section className="viewer-section">
         <div className="section-header">
           <h2 className="section-title">Interactive Wheelchair Explorer</h2>
@@ -287,10 +375,7 @@ const Viewer = () => {
           <ImageViewer
             parts={wheelchairParts}
             onPartClick={(part) => {
-              if (tourStage === 'frontHotspots' || tourStage === 'backHotspots') {
-                // Disable manual clicks during hotspot tour
-                return;
-              }
+              if (tourStage === 'frontHotspots' || tourStage === 'backHotspots') return;
               setSelectedPart(part);
               setIsModalOpen(true);
             }}
@@ -301,9 +386,9 @@ const Viewer = () => {
         </div>
       </section>
 
-      <section className="features-section">
+      <section className="features-section" style={featuresGridStyle}>
         <h2 className="section-title">Key Features</h2>
-        <div className="features-grid" ref={featuresGridRef} style={featuresGridStyle}>
+        <div className="features-grid" ref={featuresGridRef}>
           {wheelchairFeatures.map((feature, idx) => (
             <div
               key={idx}
@@ -326,23 +411,49 @@ const Viewer = () => {
           onClose={handleCloseModal}
           parts={wheelchairParts}
           setSelectedPart={setSelectedPart}
+          onVideoEnded={handleVideoEnded} // Pass video ended handler here
         />
       )}
 
-      {/* Fullscreen postBackThumbnails slideshow */}
-      {tourStage === 'postBackThumbnails' &&
- postBackIndex >= 0 &&
- postBackIndex < postBackImages.length && (
-   <div className="postback-modal-overlay">
-     <div className="postback-modal-content">
-       <img
-         src={postBackImages[postBackIndex]}
-         alt={`Thumbnail ${postBackIndex + 1}`}
-         draggable={false}
-       />
-     </div>
-   </div>
- )}
+      {/* PostBack thumbnails modal */}
+    {tourStage === 'postBackThumbnails' &&
+  postBackIndex >= 0 &&
+  postBackIndex < postBackImages.length && (
+    <div className="postback-modal-overlay">
+      <div className="postback-modal-content" style={{ position: 'relative' }}>
+        <img
+          src={postBackImages[postBackIndex]}
+          alt={`Thumbnail ${postBackIndex + 1}`}
+          draggable={false}
+          style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+        />
+        <button
+          onClick={() => {
+            // Close modal, stop slideshow, move tourStage to done or another final stage
+            setTourStage('done');
+            setPostBackIndex(-1);
+          }}
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            background: 'rgba(0,0,0,0.5)',
+            border: 'none',
+            color: 'white',
+            fontSize: 20,
+            padding: '4px 8px',
+            cursor: 'pointer',
+            borderRadius: '4px',
+            zIndex: 10000,
+          }}
+          aria-label="Close slideshow"
+          title="Close slideshow"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  )}
 
     </div>
   );

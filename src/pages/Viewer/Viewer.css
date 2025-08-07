@@ -6,7 +6,7 @@
 }
 
 .viewer-section {
-  margin: 60px 0;
+  margin: -95px 0;
   animation: fadeIn 1s ease;
 }
 
@@ -54,7 +54,7 @@
 
 /* Enhanced Features Section */
 .features-section {
-  margin: 60px 0;
+  margin: 85px 0;
   animation: fadeIn 1s ease;
 }
 
@@ -444,4 +444,83 @@
   -moz-user-drag: none;
   -ms-user-drag: none;
   user-select: none; /* Optional: prevent selection */
+}
+/* Modal fade animations */
+.modal-fade.modal-fade-enter-active {
+  opacity: 1;
+  transition: opacity 0.5s ease-in;
+}
+
+.modal-fade.modal-fade-exit-active {
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+
+/* PostBack modal overlay: dark translucent backdrop */
+.postback-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+/* PostBack modal content: centered white box */
+.postback-modal-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  max-width: 90%;
+  max-height: 90%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.tour-controls button {
+  font-size: 1rem;
+  padding: 8px 20px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  transition: background-color 0.3s ease;
+  min-width: 100px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  left: 50%;
+
+}
+
+.tour-controls button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Stop Tour button - red */
+.tour-controls button:first-child {
+  background-color: #d63939;
+}
+
+.tour-controls button:first-child:hover:enabled {
+  background-color: #ac2e2e;
+}
+
+/* Restart Tour button - green */
+.tour-controls button:last-child {
+  background-color: #39a83c;
+}
+
+.tour-controls button:last-child:hover:enabled {
+  background-color: #2e8430;
+}
+.tour-controls {
+  display: flex;
+  justify-content: flex-end; /* aligns children (buttons) to the right */
+  gap: 10px; /* optional: add space between buttons */
 }
