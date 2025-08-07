@@ -1,0 +1,31 @@
+/* src/components/AudioPlayer/AudioPlayer.css */
+.audio-player {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.audio-player:hover {
+  background-color: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.audio-player--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audio-icon {
+  color: white;
+  font-size: 18px;
+}

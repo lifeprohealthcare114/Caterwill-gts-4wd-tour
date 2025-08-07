@@ -1,0 +1,236 @@
+/* src/pages/Home/Home.css */
+.home-page {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.hero-section {
+  position: relative;
+  height: 100vh;
+  min-height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: white;
+  overflow: hidden;
+}
+
+.video-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Desktop video styles */
+.video-background {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  transition: transform 0.5s ease;
+}
+
+/* Desktop hover effects */
+@media (hover: hover) and (pointer: fine) {
+  .hero-section:hover .video-background {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  
+  .hero-section:hover .hero-content {
+    transform: translateY(-10px);
+  }
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%);
+  z-index: 2;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 3;
+  max-width: 800px;
+  padding: 20px;
+  transform: translateY(0);
+  transition: transform 0.5s ease;
+  margin-bottom: 10vh; /* Changed from absolute positioning to margin-bottom */
+}
+
+.hero-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  margin-bottom: 1.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  animation: fadeInUp 1s ease;
+  line-height: 1.2;
+}
+
+.hero-text {
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  animation: fadeInUp 1s ease 0.2s both;
+}
+
+.hero-button {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: clamp(0.8rem, 2vw, 1rem) clamp(2rem, 4vw, 2.5rem);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-shadow: none;
+  animation: fadeInUp 1s ease 0.4s both;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.hero-button:hover {
+  background-color: #2563eb;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile and tablet specific adjustments */
+@media (max-width: 1024px) {
+  .hero-section {
+    align-items: flex-end;
+    padding-bottom: 10vh; /* Reduced from 20vh to 10vh */
+  }
+
+  .video-background {
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+  }
+
+  .hero-content {
+    width: 100%;
+    padding: 20px;
+    padding-bottom: 0vh;
+    transform: none;
+    position: relative; /* Changed from absolute to relative */
+    bottom: auto;
+    margin-bottom: -1vh; /* Added margin-bottom */
+  }
+
+  .hero-title {
+    margin-bottom: 1rem;
+    font-size: 4rem;
+  }
+
+  .hero-text {
+    font-size: 1.7rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .video-container {
+    top: 15vh;
+    height: 85vh;
+  }
+}
+
+/* Portrait mode on mobile */
+@media (max-width: 768px) and (orientation: portrait) {
+  .hero-section {
+    padding-bottom: 10vh; /* Reduced from 15vh to 10vh */
+  }
+
+  .video-container {
+    top: 10vh;
+    height: 90vh;
+  }
+
+  .hero-content {
+    padding-bottom: 3vh;
+    margin-bottom: 4vh; /* Added margin-bottom */
+  }
+}
+
+/* Landscape mode on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .video-background {
+    width: auto;
+    height: 100%;
+  }
+
+  .hero-section {
+    padding-bottom: 10vh; /* Reduced from 10vh to 5vh */
+  }
+
+  .video-container {
+    top: 5vh;
+    height: 95vh;
+  }
+}
+
+/* Smaller mobile devices */
+@media (max-width: 480px) {
+  .hero-section {
+    min-height: 400px;
+    padding-bottom: 10vh; /* Reduced from 12vh to 10vh */
+  }
+
+  .video-container {
+    top: 8vh;
+    height: 92vh;
+  }
+
+  .hero-content {
+    padding: 15px;
+    padding-bottom: 0vh;
+    margin-bottom: 8vh; /* Added margin-bottom */
+  }
+
+  .hero-title {
+    font-size: 1.8rem;
+  }
+
+  .hero-text {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-button {
+    width: 90%;
+    max-width: 250px;
+    padding: 12px 25px;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,0 +1,56 @@
+.support-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  color: #1e3a8a;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.section-title {
+  font-size: 1.8rem;
+  color: #1e3a8a;
+  margin: 30px 0 20px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 10px;
+}
+
+.faq-item {
+  margin-bottom: 25px;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.faq-question {
+  font-size: 1.2rem;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.faq-answer {
+  color: #475569;
+  line-height: 1.6;
+}
+
+.contact-section {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.contact-list {
+  color: #475569;
+  line-height: 1.8;
+  padding-left: 20px;
+}
+
+.contact-list li {
+  margin-bottom: 8px;
+}
