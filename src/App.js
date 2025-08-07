@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header/Header';
+import Footer from './components/Footer/Footer';  // Import Footer here
 import Home from './pages/Home/Home';
 import Viewer from './pages/Viewer/Viewer';
 import Support from './pages/Support/Support';
@@ -18,6 +19,7 @@ function App() {
             <Route path="/support" element={<Support />} />
           </Routes>
         </main>
+        <Footer />       
         <AudioPlayer />
       </div>
     </Router>

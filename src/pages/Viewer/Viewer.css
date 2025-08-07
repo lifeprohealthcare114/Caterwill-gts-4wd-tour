@@ -521,6 +521,6 @@
 }
 .tour-controls {
   display: flex;
-  justify-content: flex-end; /* aligns children (buttons) to the right */
-  gap: 10px; /* optional: add space between buttons */
+  justify-content: flex-end; 
+  gap: 10px; 
 }

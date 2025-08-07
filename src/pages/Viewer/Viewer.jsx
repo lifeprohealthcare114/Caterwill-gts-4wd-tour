@@ -11,7 +11,6 @@ const Viewer = () => {
   // Modal & Tour State
   const [selectedPart, setSelectedPart] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false); // For fade transitions
 
   // Current controlled view for ImageViewer
   const [currentView, setCurrentView] = useState('front');
@@ -124,7 +123,6 @@ const Viewer = () => {
 
   // Callback for when video in modal ends - close modal and proceed to next
   const handleVideoEnded = useCallback(() => {
-    setModalVisible(false); // start fade out
     clearTimeout(modalTimerRef.current);
 
     setTimeout(() => {
@@ -136,11 +134,10 @@ const Viewer = () => {
     }, 500); // fade out duration should match your CSS transition timing
   }, []);
 
-  // Open modal for hotspot with fade transitions and delay
+  // Open modal for hotspot with delay
   const openModalForHotspot = useCallback(
     (index) => {
       if (index < 0 || index >= partsForView.length) {
-        setModalVisible(false);
         clearTimeout(modalTimerRef.current);
         setTimeout(() => {
           setSelectedPart(null);
@@ -149,7 +146,6 @@ const Viewer = () => {
         return;
       }
 
-      setModalVisible(false);
       clearTimeout(modalTimerRef.current);
       clearTimeout(modalOpenTimerRef.current);
 
@@ -168,18 +164,13 @@ const Viewer = () => {
         });
         setIsModalOpen(true);
 
-        setTimeout(() => {
-          setModalVisible(true);
-        }, 100);
-
         if (part.media && part.media.type === 'video') {
           // Wait for video end, no auto close timer
         } else {
           modalTimerRef.current = setTimeout(() => {
-            setModalVisible(false);
+            setIsModalOpen(false);
             setTimeout(() => {
               setSelectedPart(null);
-              setIsModalOpen(false);
               setTimeout(() => {
                 setHotspotIndex((i) => i + 1);
               }, MODAL_TRANSITION_DELAY);
@@ -291,11 +282,10 @@ const Viewer = () => {
   const handleCloseModal = useCallback(() => {
     clearTimeout(modalTimerRef.current);
 
-    setModalVisible(false);
+    setIsModalOpen(false);
 
     setTimeout(() => {
       setSelectedPart(null);
-      setIsModalOpen(false);
 
       setTimeout(() => {
         setHotspotIndex((i) => i + 1);
@@ -349,19 +339,31 @@ const Viewer = () => {
       <div className="tour-controls" style={{ marginBottom: 20, textAlign: 'center' }}>
         <button
           onClick={stopTour}
-          style={{ marginRight: 10, padding: '8px 16px', fontSize: '1rem', cursor: 'pointer' }}
+          style={{
+            marginRight: 10,
+            padding: '8px 16px',
+            fontSize: '1rem',
+            cursor: tourStage === 'stopped' ? 'not-allowed' : 'pointer',
+            opacity: tourStage === 'stopped' ? 0.6 : 1
+          }}
           disabled={tourStage === 'stopped'}
           title="Stop the automatic tour"
         >
-          Stop Tour
+          ■ Stop Tour
         </button>
+
         <button
           onClick={restartTour}
-          style={{ padding: '8px 16px', fontSize: '1rem', cursor: 'pointer' }}
+          style={{
+            padding: '8px 16px',
+            fontSize: '1rem',
+            cursor: tourStage !== 'stopped' ? 'not-allowed' : 'pointer',
+            opacity: tourStage !== 'stopped' ? 0.6 : 1
+          }}
           disabled={tourStage !== 'stopped'}
           title="Restart the tour from beginning"
         >
-          Restart Tour
+          🔄 Restart Tour
         </button>
       </div>
 
@@ -416,45 +418,43 @@ const Viewer = () => {
       )}
 
       {/* PostBack thumbnails modal */}
-    {tourStage === 'postBackThumbnails' &&
-  postBackIndex >= 0 &&
-  postBackIndex < postBackImages.length && (
-    <div className="postback-modal-overlay">
-      <div className="postback-modal-content" style={{ position: 'relative' }}>
-        <img
-          src={postBackImages[postBackIndex]}
-          alt={`Thumbnail ${postBackIndex + 1}`}
-          draggable={false}
-          style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
-        />
-        <button
-          onClick={() => {
-            // Close modal, stop slideshow, move tourStage to done or another final stage
-            setTourStage('done');
-            setPostBackIndex(-1);
-          }}
-          style={{
-            position: 'absolute',
-            top: 10,
-            right: 10,
-            background: 'rgba(0,0,0,0.5)',
-            border: 'none',
-            color: 'white',
-            fontSize: 20,
-            padding: '4px 8px',
-            cursor: 'pointer',
-            borderRadius: '4px',
-            zIndex: 10000,
-          }}
-          aria-label="Close slideshow"
-          title="Close slideshow"
-        >
-          ×
-        </button>
-      </div>
-    </div>
-  )}
-
+      {tourStage === 'postBackThumbnails' &&
+        postBackIndex >= 0 &&
+        postBackIndex < postBackImages.length && (
+          <div className="postback-modal-overlay">
+            <div className="postback-modal-content" style={{ position: 'relative' }}>
+              <img
+                src={postBackImages[postBackIndex]}
+                alt={`Thumbnail ${postBackIndex + 1}`}
+                draggable={false}
+                style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+              />
+              <button
+                onClick={() => {
+                  setTourStage('done');
+                  setPostBackIndex(-1);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 10,
+                  right: 10,
+                  background: 'rgba(0,0,0,0.5)',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: 20,
+                  padding: '4px 8px',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                  zIndex: 10000,
+                }}
+                aria-label="Close slideshow"
+                title="Close slideshow"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
     </div>
   );
 };
