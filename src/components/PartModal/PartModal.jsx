@@ -1,18 +1,20 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { X, Info, AlertTriangle } from 'lucide-react';
+import { Info, AlertTriangle } from 'lucide-react';
 import './PartModal.css';
 
-const PartModal = ({ 
-  part, 
-  onClose, 
-  parts, 
+const PartModal = ({
+  part,
+  onClose,
+  parts,
   setSelectedPart,
-  onVideoEnded, // New prop for video end callback
+  onVideoEnded, // Video end callback
+  showSkipButton = false,  // NEW: Show skip button flag
+  onSkip = () => {},       // NEW: Skip handler callback
 }) => {
   const videoRef = useRef(null);
   const playPromiseRef = useRef(null);
   const [currentPartIndex, setCurrentPartIndex] = useState(
-    parts.findIndex(p => p.id === part.id)
+    parts.findIndex((p) => p.id === part.id)
   );
   const [isPlaying, setIsPlaying] = useState(false);
   const [showSpecs, setShowSpecs] = useState(false);
@@ -22,19 +24,19 @@ const PartModal = ({
   const media = part.media || {
     type: 'image',
     src: '/assets/images/placeholder-part.jpg',
-    poster: '/assets/images/placeholder-poster.jpg'
+    poster: '/assets/images/placeholder-poster.jpg',
   };
 
   const safePlay = useCallback(() => {
     if (!videoRef.current) return Promise.resolve();
-    
+
     if (playPromiseRef.current) {
       playPromiseRef.current.catch(() => {});
     }
-    
+
     const playPromise = videoRef.current.play();
     playPromiseRef.current = playPromise;
-    
+
     return playPromise
       .then(() => {
         if (playPromiseRef.current === playPromise) {
@@ -42,7 +44,7 @@ const PartModal = ({
           playPromiseRef.current = null;
         }
       })
-      .catch(error => {
+      .catch((error) => {
         if (playPromiseRef.current === playPromise) {
           console.log('Play failed:', error);
           setIsPlaying(false);
@@ -53,21 +55,21 @@ const PartModal = ({
 
   const safePause = useCallback(() => {
     if (!videoRef.current) return;
-    
+
     if (playPromiseRef.current) {
       playPromiseRef.current.catch(() => {});
       playPromiseRef.current = null;
     }
-    
+
     videoRef.current.pause();
     setIsPlaying(false);
   }, []);
 
   const togglePlayback = useCallback(() => {
     if (!videoRef.current) return;
-    
+
     setUserInteracted(true);
-    
+
     if (!isPlaying) {
       safePlay();
     } else {
@@ -75,19 +77,22 @@ const PartModal = ({
     }
   }, [isPlaying, safePlay, safePause]);
 
-  const navigateParts = useCallback(async (direction) => {
-    if (videoRef.current && media.type === 'video') {
-      await safePause();
-      setIsLoading(true);
-    }
-    
-    let newIndex = currentPartIndex + direction;
-    if (newIndex < 0) newIndex = parts.length - 1;
-    if (newIndex >= parts.length) newIndex = 0;
-    setCurrentPartIndex(newIndex);
-    setSelectedPart(parts[newIndex]);
-    setUserInteracted(false);
-  }, [currentPartIndex, parts, setSelectedPart, media.type, safePause]);
+  const navigateParts = useCallback(
+    async (direction) => {
+      if (videoRef.current && media.type === 'video') {
+        await safePause();
+        setIsLoading(true);
+      }
+
+      let newIndex = currentPartIndex + direction;
+      if (newIndex < 0) newIndex = parts.length - 1;
+      if (newIndex >= parts.length) newIndex = 0;
+      setCurrentPartIndex(newIndex);
+      setSelectedPart(parts[newIndex]);
+      setUserInteracted(false);
+    },
+    [currentPartIndex, parts, setSelectedPart, media.type, safePause]
+  );
 
   useEffect(() => {
     const videoElement = videoRef.current;
@@ -155,20 +160,31 @@ const PartModal = ({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="close-button" onClick={onClose}>
-          <X size={24} />
-        </button>
+   
+
+        {/* Skip Button */}
+        {showSkipButton && (
+          <button
+            className="skip-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSkip();
+            }}
+            aria-label="Skip this part"
+            title="Skip this part"
+          >
+            Skip ▶
+          </button>
+        )}
 
         <div className="modal-header">
-         
-
           <div className="part-title-container">
             <h2 className="part-title">
               <span className="part-icon">{part.icon}</span>
               {part.name}
             </h2>
             <div className="part-controls">
-              <button 
+              <button
                 className="specs-toggle"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -180,8 +196,6 @@ const PartModal = ({
               </button>
             </div>
           </div>
-
-        
         </div>
 
         <div className="modal-body">
@@ -201,35 +215,38 @@ const PartModal = ({
                     <p>Loading video...</p>
                   </div>
                 )}
-               <video
-  ref={videoRef}
-  controls={false}
-  muted
-  playsInline
-  poster={media.poster}
-  className={`part-media ${isLoading ? 'loading' : ''}`}
-  onClick={togglePlayback}
-  onEnded={() => {
-    if (typeof onVideoEnded === 'function') onVideoEnded();
-  }}
->
-  <source src={media.src} type="video/mp4" />
-  Your browser does not support the video tag.
-</video>
-                <button 
-                  className={`play-button ${isPlaying ? 'playing' : ''} ${isLoading ? 'hidden' : ''}`}
+                <video
+                  ref={videoRef}
+                  controls={false}
+                  muted
+                  playsInline
+                  poster={media.poster}
+                  className={`part-media ${isLoading ? 'loading' : ''}`}
+                  onClick={togglePlayback}
+                  onEnded={() => {
+                    if (typeof onVideoEnded === 'function') onVideoEnded();
+                  }}
+                >
+                  <source src={media.src} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+                <button
+                  className={`play-button ${isPlaying ? 'playing' : ''} ${
+                    isLoading ? 'hidden' : ''
+                  }`}
                   onClick={(e) => {
                     e.stopPropagation();
                     togglePlayback();
                   }}
+                  aria-label={isPlaying ? 'Pause video' : 'Play video'}
                 >
                   {isPlaying ? '❚❚' : '▶'}
                 </button>
               </div>
             ) : (
-              <img 
-                src={media.src} 
-                alt={part.name} 
+              <img
+                src={media.src}
+                alt={part.name}
                 className="part-media"
                 onError={(e) => {
                   e.target.src = '/assets/images/placeholder-part.jpg';
@@ -275,10 +292,7 @@ const PartModal = ({
         </div>
 
         <div className="modal-footer">
-          <button 
-            className="close-modal-button" 
-            onClick={onClose}
-          >
+          <button className="close-modal-button" onClick={onClose}>
             Return to Explorer
           </button>
         </div>
