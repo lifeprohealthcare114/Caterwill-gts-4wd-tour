@@ -11,7 +11,7 @@ const ImageViewer = ({
   setCurrentView: controlledSetCurrentView,
 }) => {
   const [internalView, setInternalView] = useState('front');
-  const [rotatingView, setRotatingView] = useState(null);
+  const [, setRotatingView] = useState(null);
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [imageDimensions, setImageDimensions] = useState({
     naturalWidth: 0,
