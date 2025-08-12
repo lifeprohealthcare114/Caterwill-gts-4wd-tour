@@ -27,8 +27,7 @@ const Viewer = () => {
   // Tour stages including stopped state
   const [tourStage, setTourStage] = useState('waiting');
 
-  // New state to track if modal is opened by user click on hotspot image (front/back view)
-  // Now we show skip button on *all* front/back hotspot modals (automatic or manual)
+  // Track if modal was opened by user clicking on hotspot image
   const [isUserClickedModal, setIsUserClickedModal] = useState(false);
 
   // Timer refs
@@ -49,7 +48,7 @@ const Viewer = () => {
     '/assets/images/Caterwil5.jpg',
   ];
 
-  // Full smooth scroll and navigate function after postBack slideshow
+  // Smooth scroll and navigation after tour done
   const handleScrollAndNavigate = useCallback(async () => {
     const scrollDown = () =>
       new Promise((resolve) => {
@@ -113,14 +112,13 @@ const Viewer = () => {
     window.location.href = '/';
   }, []);
 
-  // Slight scroll - longer and lighter scroll, used after last back hotspot modal closes before PostBack thumbnails
+  // Slight scroll down before PostBack thumbnails
   const slightScrollDown = useCallback(() => {
     return new Promise((resolve) => {
       const startY = window.pageYOffset;
       const maxScroll = document.body.scrollHeight - window.innerHeight;
-      // Scroll down by 350px or to bottom whichever is smaller (more gentle)
       const targetY = Math.min(startY + 350, maxScroll);
-      const duration = 1200; // longer duration for smoother effect (~1.2 seconds)
+      const duration = 1200;
       let startTime = null;
 
       const animate = (time) => {
@@ -145,7 +143,7 @@ const Viewer = () => {
     });
   }, []);
 
-  // Estimate reading time calculation
+  // Estimate reading time
   const estimateReadingTime = useCallback((text) => {
     const words = text ? text.trim().split(/\s+/).length : 20;
     return Math.min(Math.max(words * 300, 4000), 15000);
@@ -171,7 +169,7 @@ const Viewer = () => {
     }, 500);
   }, []);
 
-  // Open modal for hotspot with delay (automatic tour)
+  // Open modal for hotspot with delay
   const openModalForHotspot = useCallback(
     (index) => {
       if (index < 0 || index >= partsForView.length) {
@@ -200,7 +198,6 @@ const Viewer = () => {
           safetyNote: part.safetyNote || null,
         });
         setIsModalOpen(true);
-        // Show Skip button on all front/back hotspot tour modals (auto or user triggered)
         setIsUserClickedModal(true);
 
         if (part.media && part.media.type === 'video') {
@@ -239,7 +236,7 @@ const Viewer = () => {
     }
   }, [accessoryIndex, tourStage]);
 
-  // Main tour effect with stop check & enhanced scroll + delay before postBack thumbnails
+  // Main tour effect with stop check & enhanced scroll + delay before PostBack thumbnails
   useEffect(() => {
     if (tourStage === 'stopped') return;
 
@@ -272,7 +269,6 @@ const Viewer = () => {
         setIsModalOpen(false);
         setSelectedPart(null);
 
-        // Perform slight longer scroll, then 3s delay, then start PostBack thumbnails
         slightScrollDown()
           .then(() => new Promise((r) => setTimeout(r, 3000)))
           .then(() => {
@@ -301,7 +297,7 @@ const Viewer = () => {
     if (postBackIndex >= postBackImages.length) {
       setTourStage('done');
       setPostBackIndex(-1);
-      return; // handleScrollAndNavigate called in separate effect after 'done'
+      return;
     }
 
     const timer = setTimeout(() => {
@@ -319,7 +315,7 @@ const Viewer = () => {
     if (accessoryIndex >= wheelchairFeatures.length) {
       setTourStage('done');
       setAccessoryIndex(-1);
-      return; // handleScrollAndNavigate called in separate effect after 'done'
+      return;
     }
 
     const timer = setTimeout(() => {
@@ -356,23 +352,22 @@ const Viewer = () => {
     setIsUserClickedModal(false);
   }, []);
 
-  // Skip handler: skip current modal and move to next hotspot modal front/back view
+  // Skip handler: closes modal, then after short delay opens next, continuing tour normally
   const handleSkip = useCallback(() => {
     setIsModalOpen(false);
     setSelectedPart(null);
 
     if (currentView === 'front' || currentView === 'back') {
-      setHotspotIndex((i) => {
-        const nextIndex = i + 1;
-        if (nextIndex >= partsForView.length) {
-          setIsUserClickedModal(false);
-          return i; // stop at last index
-        }
-        return nextIndex;
-      });
+      const nextIndex = hotspotIndex + 1;
+
+      // Always advance hotspotIndex, even beyond last index, so tour progresses naturally
+      setTimeout(() => {
+        setHotspotIndex(nextIndex);
+      }, 100); // slight delay to ensure modal closes first
     }
+
     setIsUserClickedModal(false);
-  }, [currentView, partsForView.length]);
+  }, [currentView, hotspotIndex]);
 
   // Handle part click on ImageViewer
   const handlePartClick = (part) => {
@@ -383,29 +378,31 @@ const Viewer = () => {
     setIsUserClickedModal(true);
   };
 
-  // During automatic hotspot modal opening, ensure skip button shows on all front/back modals
+  // Automatic modal opening on hotspot index change during tour
   useEffect(() => {
-    if (tourStage === 'frontHotspots' || tourStage === 'backHotspots') {
-      if (!isModalOpen && hotspotIndex < partsForView.length) {
-        const part = partsForView[hotspotIndex];
-        setSelectedPart({
-          ...part,
-          media:
-            part.media || {
-              type: 'image',
-              src: '/assets/images/placeholder-part.jpg',
-              poster: '/assets/images/placeholder-poster.jpg',
-            },
-          specs: part.specs || [],
-          safetyNote: part.safetyNote || null,
-        });
-        setIsModalOpen(true);
-        setIsUserClickedModal(true); // show Skip button
-      }
+    if (
+      (tourStage === 'frontHotspots' || tourStage === 'backHotspots') &&
+      !isModalOpen &&
+      hotspotIndex < partsForView.length
+    ) {
+      const part = partsForView[hotspotIndex];
+      setSelectedPart({
+        ...part,
+        media:
+          part.media || {
+            type: 'image',
+            src: '/assets/images/placeholder-part.jpg',
+            poster: '/assets/images/placeholder-poster.jpg',
+          },
+        specs: part.specs || [],
+        safetyNote: part.safetyNote || null,
+      });
+      setIsModalOpen(true);
+      setIsUserClickedModal(true); // show Skip button on all front/back hotspot modals
     }
   }, [hotspotIndex, tourStage, partsForView, isModalOpen]);
 
-  // Responsive mobile detection for horizontal scroll
+  // Responsive mobile detection
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false
   );
@@ -528,7 +525,7 @@ const Viewer = () => {
           parts={wheelchairParts}
           setSelectedPart={setSelectedPart}
           onVideoEnded={handleVideoEnded}
-          showSkipButton={isUserClickedModal} // Skip button shown on all front/back hotspot modals
+          showSkipButton={isUserClickedModal} // Show skip button on all user opened modals
           onSkip={handleSkip}
         />
       )}
