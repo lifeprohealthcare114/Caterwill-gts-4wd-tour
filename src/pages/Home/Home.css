@@ -73,7 +73,7 @@
   padding: 20px;
   transform: translateY(0);
   transition: transform 0.5s ease;
-  margin-bottom: -45vh; /* Changed from absolute positioning to margin-bottom */
+  margin-bottom: -36vh; /* Changed from absolute positioning to margin-bottom */
 }
 
 .hero-title {

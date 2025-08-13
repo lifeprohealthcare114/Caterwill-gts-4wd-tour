@@ -4,42 +4,28 @@ import PartModal from '../../components/PartModal/PartModal';
 import ImageViewer from '../../components/ImageViewer/ImageViewer';
 import './Viewer.css';
 
-// Constants
 const MODAL_TRANSITION_DELAY = 2000;
 
 const Viewer = () => {
   // Modal & Tour State
   const [selectedPart, setSelectedPart] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Current controlled view for ImageViewer
   const [currentView, setCurrentView] = useState('front');
-
-  // Hotspot tour indexes for front and back views
   const [hotspotIndex, setHotspotIndex] = useState(0);
-
-  // Accessories slideshow index (-1 means not started)
   const [accessoryIndex, setAccessoryIndex] = useState(-1);
-
-  // PostBack thumbnails slideshow index (-1 means not started)
   const [postBackIndex, setPostBackIndex] = useState(-1);
-
-  // Tour stages including stopped state
   const [tourStage, setTourStage] = useState('waiting');
-
-  // Track if modal was opened by user clicking on hotspot image
   const [isUserClickedModal, setIsUserClickedModal] = useState(false);
 
-  // Timer refs
+  // Refs
   const modalTimerRef = useRef(null);
   const accessoryTimerRef = useRef(null);
   const modalOpenTimerRef = useRef(null);
   const featuresGridRef = useRef(null);
-
-  // Ref to track if back hotspots tour cycle completed
   const hadBackHotspotsTour = useRef(false);
 
-  // PostBack thumbnails images
+  const isSkippingRef = useRef(false);
+
   const postBackImages = [
     '/assets/images/Caterwil1.jpg',
     '/assets/images/Caterwil2.jpg',
@@ -47,6 +33,57 @@ const Viewer = () => {
     '/assets/images/Caterwil4.jpg',
     '/assets/images/Caterwil5.jpg',
   ];
+
+  // Check if horizontal scrolling is needed for mobile/tablet
+  const hasHorizontalScroll = useCallback(() => {
+    if (!featuresGridRef.current) return false;
+    const container = featuresGridRef.current;
+    return container.scrollWidth > container.clientWidth;
+  }, []);
+
+  // Smooth horizontal scroll for mobile/tablet
+  const smoothHorizontalScroll = useCallback(() => {
+    return new Promise((resolve) => {
+      if (!featuresGridRef.current || !hasHorizontalScroll()) {
+        resolve();
+        return;
+      }
+
+      const container = featuresGridRef.current;
+      const maxScrollLeft = container.scrollWidth - container.clientWidth;
+      
+      if (maxScrollLeft <= 0) {
+        resolve();
+        return;
+      }
+
+      const duration = 4000; // 4 seconds for horizontal scroll
+      let startTime = null;
+      const startScrollLeft = container.scrollLeft;
+
+      const animate = (time) => {
+        if (!startTime) startTime = time;
+        const elapsed = time - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing function
+        const ease = progress < 0.5
+          ? 2 * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+        container.scrollLeft = startScrollLeft + (maxScrollLeft - startScrollLeft) * ease;
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // Wait a bit at the end, then resolve
+          setTimeout(resolve, 1000);
+        }
+      };
+
+      requestAnimationFrame(animate);
+    });
+  }, [hasHorizontalScroll]);
 
   // Smooth scroll and navigation after tour done
   const handleScrollAndNavigate = useCallback(async () => {
@@ -104,15 +141,29 @@ const Viewer = () => {
         requestAnimationFrame(animate);
       });
 
+    // Wait a moment before starting
     await new Promise((r) => setTimeout(r, 1000));
+    
+    // 1. First scroll down to the bottom
     await scrollDown();
-    await new Promise((r) => setTimeout(r, 9000));
+    
+    // 2. Then check for horizontal scroll and handle it
+    if (hasHorizontalScroll()) {
+      await smoothHorizontalScroll();
+      await new Promise((r) => setTimeout(r, 2000)); // Wait 2 seconds after horizontal scroll
+    }
+    
+    // 3. Wait additional 6 seconds at the bottom (total viewing time)
+    await new Promise((r) => setTimeout(r, 6000));
+    
+    // 4. Smooth scroll up back to the top
     await scrollUp();
+    
+    // 5. Wait a moment then navigate to home page
     await new Promise((r) => setTimeout(r, 1000));
     window.location.href = '/';
-  }, []);
+  }, [hasHorizontalScroll, smoothHorizontalScroll]);
 
-  // Slight scroll down before PostBack thumbnails
   const slightScrollDown = useCallback(() => {
     return new Promise((resolve) => {
       const startY = window.pageYOffset;
@@ -143,20 +194,17 @@ const Viewer = () => {
     });
   }, []);
 
-  // Estimate reading time
   const estimateReadingTime = useCallback((text) => {
     const words = text ? text.trim().split(/\s+/).length : 20;
     return Math.min(Math.max(words * 300, 4000), 15000);
   }, []);
 
-  // Filter parts for current view
   const partsForView = React.useMemo(() => {
     return currentView === 'front'
       ? wheelchairParts.filter((p) => p.frontPosition)
       : wheelchairParts.filter((p) => p.backPosition);
   }, [currentView]);
 
-  // Callback when video ends in modal
   const handleVideoEnded = useCallback(() => {
     clearTimeout(modalTimerRef.current);
 
@@ -169,7 +217,6 @@ const Viewer = () => {
     }, 500);
   }, []);
 
-  // Open modal for hotspot with delay
   const openModalForHotspot = useCallback(
     (index) => {
       if (index < 0 || index >= partsForView.length) {
@@ -201,7 +248,7 @@ const Viewer = () => {
         setIsUserClickedModal(true);
 
         if (part.media && part.media.type === 'video') {
-          // Wait for video end, no auto close timer
+          // Do not auto-close timer for videos
         } else {
           modalTimerRef.current = setTimeout(() => {
             setIsModalOpen(false);
@@ -218,7 +265,6 @@ const Viewer = () => {
     [partsForView, estimateReadingTime]
   );
 
-  // Scroll accessories grid to center active item
   useEffect(() => {
     if (accessoryIndex === -1 || !featuresGridRef.current) return;
     if (tourStage === 'accessories') return;
@@ -236,7 +282,6 @@ const Viewer = () => {
     }
   }, [accessoryIndex, tourStage]);
 
-  // Main tour effect with stop check & enhanced scroll + delay before PostBack thumbnails
   useEffect(() => {
     if (tourStage === 'stopped') return;
 
@@ -289,10 +334,10 @@ const Viewer = () => {
     slightScrollDown,
   ]);
 
-  // PostBack thumbnail slideshow
+  // PostBack thumbnails with auto-advance after 5 seconds
   useEffect(() => {
     if (tourStage === 'stopped') return;
-    if (tourStage !== 'postBackThumbnails' || postBackIndex === -1) return;
+    if (tourStage !== 'postBackThumbnails' || postBackIndex === -1 || postBackIndex === null) return;
 
     if (postBackIndex >= postBackImages.length) {
       setTourStage('done');
@@ -300,14 +345,21 @@ const Viewer = () => {
       return;
     }
 
-    const timer = setTimeout(() => {
-      setPostBackIndex((i) => i + 1);
-    }, 5000);
+    const autoAdvanceTimer = setTimeout(() => {
+      if (postBackIndex >= postBackImages.length - 1) {
+        // If it's the last image, end the slideshow and continue tour
+        setTourStage('done');
+        setPostBackIndex(-1);
+      } else {
+        // Show next image
+        setPostBackIndex((prev) => prev + 1);
+      }
+    }, 5000); // 5 seconds auto-advance
 
-    return () => clearTimeout(timer);
+    return () => clearTimeout(autoAdvanceTimer);
   }, [postBackIndex, tourStage, postBackImages.length]);
 
-  // Accessories slideshow effect
+  // Accessories slideshow
   useEffect(() => {
     if (tourStage === 'stopped') return;
     if (tourStage !== 'accessories' || accessoryIndex === -1) return;
@@ -327,7 +379,6 @@ const Viewer = () => {
     return () => clearTimeout(timer);
   }, [accessoryIndex, tourStage]);
 
-  // Trigger full scroll/navigation when tourStage is done
   useEffect(() => {
     if (tourStage === 'done') {
       if (hadBackHotspotsTour.current || accessoryIndex === -1) {
@@ -336,10 +387,8 @@ const Viewer = () => {
     }
   }, [tourStage, handleScrollAndNavigate, accessoryIndex]);
 
-  // Manual modal close handler
   const handleCloseModal = useCallback(() => {
     clearTimeout(modalTimerRef.current);
-
     setIsModalOpen(false);
 
     setTimeout(() => {
@@ -352,24 +401,27 @@ const Viewer = () => {
     setIsUserClickedModal(false);
   }, []);
 
-  // Skip handler: closes modal, then after short delay opens next, continuing tour normally
   const handleSkip = useCallback(() => {
+    isSkippingRef.current = true;
+
     setIsModalOpen(false);
     setSelectedPart(null);
 
     if (currentView === 'front' || currentView === 'back') {
       const nextIndex = hotspotIndex + 1;
-
-      // Always advance hotspotIndex, even beyond last index, so tour progresses naturally
       setTimeout(() => {
         setHotspotIndex(nextIndex);
-      }, 100); // slight delay to ensure modal closes first
+        setTimeout(() => {
+          isSkippingRef.current = false;
+        }, 300);
+      }, 100);
+    } else {
+      isSkippingRef.current = false;
     }
 
     setIsUserClickedModal(false);
   }, [currentView, hotspotIndex]);
 
-  // Handle part click on ImageViewer
   const handlePartClick = (part) => {
     if (tourStage === 'frontHotspots' || tourStage === 'backHotspots') return;
 
@@ -378,13 +430,25 @@ const Viewer = () => {
     setIsUserClickedModal(true);
   };
 
-  // Automatic modal opening on hotspot index change during tour
+  // Handle PostBack thumbnail close button - show next image or end slideshow
+  const handlePostBackClose = useCallback(() => {
+    if (postBackIndex >= postBackImages.length - 1) {
+      // If it's the last image, end the slideshow and continue tour
+      setTourStage('done');
+      setPostBackIndex(-1);
+    } else {
+      // Show next image
+      setPostBackIndex((prev) => prev + 1);
+    }
+  }, [postBackIndex, postBackImages.length]);
+
   useEffect(() => {
     if (
       (tourStage === 'frontHotspots' || tourStage === 'backHotspots') &&
       !isModalOpen &&
       hotspotIndex < partsForView.length
     ) {
+      if (isSkippingRef.current) return;
       const part = partsForView[hotspotIndex];
       setSelectedPart({
         ...part,
@@ -398,11 +462,10 @@ const Viewer = () => {
         safetyNote: part.safetyNote || null,
       });
       setIsModalOpen(true);
-      setIsUserClickedModal(true); // show Skip button on all front/back hotspot modals
+      setIsUserClickedModal(true);
     }
   }, [hotspotIndex, tourStage, partsForView, isModalOpen]);
 
-  // Responsive mobile detection
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false
   );
@@ -418,7 +481,6 @@ const Viewer = () => {
     overflowX: isMobile ? 'auto' : 'hidden',
   };
 
-  // Stop and restart tour handlers
   const stopTour = useCallback(() => {
     clearTimeout(modalTimerRef.current);
     clearTimeout(accessoryTimerRef.current);
@@ -450,38 +512,6 @@ const Viewer = () => {
 
   return (
     <div className="viewer-page">
-      {/* Tour control buttons */}
-      <div className="tour-controls" style={{ marginBottom: 20, textAlign: 'center' }}>
-        <button
-          onClick={stopTour}
-          style={{
-            marginRight: 10,
-            padding: '8px 16px',
-            fontSize: '1rem',
-            cursor: tourStage === 'stopped' ? 'not-allowed' : 'pointer',
-            opacity: tourStage === 'stopped' ? 0.6 : 1,
-          }}
-          disabled={tourStage === 'stopped'}
-          title="Stop the automatic tour"
-        >
-          ■ Stop Tour
-        </button>
-
-        <button
-          onClick={restartTour}
-          style={{
-            padding: '8px 16px',
-            fontSize: '1rem',
-            cursor: tourStage !== 'stopped' ? 'not-allowed' : 'pointer',
-            opacity: tourStage !== 'stopped' ? 0.6 : 1,
-          }}
-          disabled={tourStage !== 'stopped'}
-          title="Restart the tour from beginning"
-        >
-          🔄 Restart Tour
-        </button>
-      </div>
-
       <section className="viewer-section">
         <div className="section-header">
           <h2 className="section-title">Interactive Wheelchair Explorer</h2>
@@ -525,13 +555,13 @@ const Viewer = () => {
           parts={wheelchairParts}
           setSelectedPart={setSelectedPart}
           onVideoEnded={handleVideoEnded}
-          showSkipButton={isUserClickedModal} // Show skip button on all user opened modals
+          showSkipButton={isUserClickedModal}
           onSkip={handleSkip}
         />
       )}
 
-      {/* PostBack thumbnails modal */}
       {tourStage === 'postBackThumbnails' &&
+        postBackIndex !== null &&
         postBackIndex >= 0 &&
         postBackIndex < postBackImages.length && (
           <div className="postback-modal-overlay">
@@ -543,10 +573,7 @@ const Viewer = () => {
                 style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
               />
               <button
-                onClick={() => {
-                  setTourStage('done');
-                  setPostBackIndex(-1);
-                }}
+                onClick={handlePostBackClose}
                 style={{
                   position: 'absolute',
                   top: 10,
@@ -560,14 +587,63 @@ const Viewer = () => {
                   borderRadius: '4px',
                   zIndex: 10000,
                 }}
-                aria-label="Close slideshow"
-                title="Close slideshow"
+                aria-label="Close"
+                title="Close"
               >
                 ×
               </button>
+
+              {/* Optional: Show image counter */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 10,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'rgba(0,0,0,0.7)',
+                  color: 'white',
+                  padding: '4px 12px',
+                  borderRadius: '16px',
+                  fontSize: '14px',
+                }}
+              >
+                {postBackIndex + 1} / {postBackImages.length}
+              </div>
             </div>
           </div>
         )}
+
+      {/* Moved Stop and Restart buttons to render last */}
+      <div className="tour-controls" style={{ marginTop: 20, textAlign: 'center' }}>
+        <button
+          onClick={stopTour}
+          style={{
+            marginRight: 10,
+            padding: '6px 12px',
+            fontSize: '1rem',
+            cursor: tourStage === 'stopped' ? 'not-allowed' : 'pointer',
+            opacity: tourStage === 'stopped' ? 0.6 : 1,
+          }}
+          disabled={tourStage === 'stopped'}
+          title="Stop the automatic tour"
+        >
+          ■ Stop Tour
+        </button>
+
+        <button
+          onClick={restartTour}
+          style={{
+            padding: '6px 12px',
+            fontSize: '1rem',
+            cursor: tourStage !== 'stopped' ? 'not-allowed' : 'pointer',
+            opacity: tourStage !== 'stopped' ? 0.6 : 1,
+          }}
+          disabled={tourStage !== 'stopped'}
+          title="Restart the tour from beginning"
+        >
+          🔄 Restart Tour
+        </button>
+      </div>
     </div>
   );
 };

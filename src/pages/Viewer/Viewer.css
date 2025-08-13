@@ -6,7 +6,7 @@
 }
 
 .viewer-section {
-  margin: -95px 0;
+  margin: 5px 0;
   animation: fadeIn 1s ease;
 }
 
@@ -482,6 +482,22 @@
   justify-content: center;
   align-items: center;
 }
+.tour-controls {
+  position: fixed;
+  bottom: 785px;
+  right: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  max-width: calc(100vw - 40px);  /* Ensure no overflow for very small screens */
+  flex-wrap: nowrap;
+}
+
 .tour-controls button {
   font-size: 1rem;
   padding: 8px 20px;
@@ -489,13 +505,13 @@
   border: none;
   border-radius: 4px;
   color: white;
-  transition: background-color 0.3s ease;
   min-width: 100px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  left: 50%;
-
+  transition: background-color 0.3s ease;
+  white-space: nowrap;
 }
 
+/* Disabled styling */
 .tour-controls button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -506,7 +522,6 @@
 .tour-controls button:first-child {
   background-color: #d63939;
 }
-
 .tour-controls button:first-child:hover:enabled {
   background-color: #ac2e2e;
 }
@@ -515,12 +530,42 @@
 .tour-controls button:last-child {
   background-color: #39a83c;
 }
-
 .tour-controls button:last-child:hover:enabled {
   background-color: #2e8430;
 }
-.tour-controls {
-  display: flex;
-  justify-content: flex-end; 
-  gap: 10px; 
+
+/* Responsive adjustments */
+
+/* Tablets and smaller */
+@media (max-width: 768px) {
+  .tour-controls {
+    right: 10px;
+    bottom: 15px;
+    padding: 8px 12px;
+    max-width: calc(100vw - 20px);
+    gap: 8px;
+  }
+
+  .tour-controls button {
+    font-size: 0.9rem;
+    padding: 7px 16px;
+    min-width: 90px;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 480px) {
+  .tour-controls {
+    right: 5px;
+    bottom: 788px;
+    padding: 6px 10px;
+    max-width: calc(100vw - 10px);
+    gap: 6px;
+  }
+
+  .tour-controls button {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    min-width: 80px;
+  }
 }

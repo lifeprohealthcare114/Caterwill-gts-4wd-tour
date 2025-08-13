@@ -93,18 +93,31 @@
   background-color: #f1f5f9;
 }
 
+/* Always keep two columns */
 .modal-body {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr !important;
   gap: 20px;
   padding: 20px;
   flex-grow: 1;
   overflow: hidden;
 }
 
-@media (max-width: 768px) {
-  .modal-body {
-    grid-template-columns: 1fr;
+/* Fit content properly on small screens */
+@media (max-width: 600px) {
+  .modal-content {
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .part-media {
+    max-height: 180px;
+  }
+  .video-wrapper {
+    height: 180px;
+  }
+  .detail-section {
+    padding: 16px;
   }
 }
 
@@ -259,9 +272,11 @@
 .specs-toggle:hover {
   background-color: #f1f5f9;
 }
-.specs-section{
+
+.specs-section {
   padding-left: 31px;
 }
+
 .specs-list {
   padding-left: 20px;
   margin-top: 8px;
@@ -384,7 +399,9 @@
   color: #64748b;
   font-size: 0.9rem;
   margin-top: 10px;
-}/* Position Skip button near the close button */
+}
+
+/* Position Skip button near the close button */
 .skip-button {
   position: absolute;
   top: 10px;
@@ -407,7 +424,7 @@
   outline: none;
 }
 
-/* Responsive adjustments */
+/* Responsive adjustments for skip button only */
 @media (max-width: 480px) {
   .skip-button {
     padding: 4px 10px;
